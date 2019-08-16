@@ -1,8 +1,9 @@
 #-*- coding: utf8 -*-
 from keras.models import Sequential, Model
-from keras.layers import Input, Conv2D, MaxPooling2D, Flatten, Dense, Dropout, Concatenate
+from keras.layers import Input, Conv2D, MaxPooling2D, Flatten, Dense, Dropout, Concatenate, Lambda
 from keras.optimizers import SGD
 from keras.losses import categorical_crossentropy
+from keras import backend as K
 
 def Conv_Layer(filters, kernel_size, input_shape=None):
 	if input_shape:
@@ -65,7 +66,6 @@ def Cp_Layer(x):
 	y = Flatten()(y)
 	return y
 
-
 def multidcnn(input_shape=(81, 78, 1), num_classes=100):
 	inputs = [Input(shape=input_shape) for i in range(10)]
 
@@ -81,6 +81,28 @@ def multidcnn(input_shape=(81, 78, 1), num_classes=100):
 
 	model.compile(
 		loss=categorical_crossentropy,
+		optimizer=sgd,
+		metrics=['accuracy']
+	)
+
+	return model
+
+def sse((x1, x2)):
+	return K.square(x1 - x2)
+
+def similarity(input_shape=(81, 78, 1)):
+	inputs = [Input(shape=input_shape), Input(shape=input_shape)]
+	y = [Cp_Layer(x) for x in inputs]
+	y = Lambda(sse)(y)
+	y = Dense(100, activation='relu')(y)
+	y = Dense(1, activation='sigmoid')(y)
+
+	model = Model(inputs=inputs, outputs=y)
+
+	sgd = SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=True)
+
+	model.compile(
+		loss='binary_crossentropy',
 		optimizer=sgd,
 		metrics=['accuracy']
 	)

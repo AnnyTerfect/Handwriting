@@ -5,14 +5,22 @@ import os
 import pickle
 import multiprocessing as mp
 
-def img_enpower(img, direction):
+def img_enpower(img, direction=0):
 	if direction == 0:
-		if len(img.shape) == 3:
-			img = img.reshape((img.shape[0], img.shape[1]))
-		h, w = img.shape
-		timg = img[:, 20: w]
-		img = np.zeros((h, w))
-		img[10: w - 10, :] = timg
+		di1, di2, dj1, dj2 = 0, 0, 20, 0
+
+	if len(img.shape) == 3:
+		img = img.reshape((img.shape[0], img.shape[1]))
+	h, w = img.shape
+
+	timg = img[di1: h - di2, dj1: w - dj2]
+	img = np.zeros((h, w))
+
+	ci = int((di1 + di2) / 2)
+	cj = int((dj1 + dj2) / 2)
+	img[ci: h - ci, cj: w - cj] = timg
+
+	return img
 
 def resize_cont(img, h, w):
 	ori_h, ori_w, t = img.shape
@@ -35,3 +43,8 @@ def save_sample(datas, n):
 
 	for i in range(n):
 		cv2.imwrite('sample/sample{}.png'.format(i + 1), datas[i] * 255)
+
+def dump(data, file):
+	f = open(file, 'wb')
+	pickle.dump(data, f)
+	f.close()

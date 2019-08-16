@@ -1,7 +1,7 @@
 #-*- coding: utf8 -*-
 import numpy as np
 
-def evaluate(model, x_test, y_test, num_per_clu=10):
+def model_evaluate(model, x_test, y_test, num_per_clu=10):
 	global _fx_test, _y_test
 
 	ly = len(y_test)
@@ -36,7 +36,8 @@ def evaluate(model, x_test, y_test, num_per_clu=10):
 		if cat == _y_test[i]:
 			num_cor += 1
 
-	print('correct: {} of {}'.format(num_cor, num_cluster))
-	print('accurate: {}%'.format(100.0 * num_cor / num_cluster))
+	accurate = 100.0 * num_cor / num_cluster
+	#print('correct: {} of {}'.format(num_cor, num_cluster))
+	#print('accurate: {}%'.format(accurate))
 
-
+	return [accurate, num_cor, num_cluster]

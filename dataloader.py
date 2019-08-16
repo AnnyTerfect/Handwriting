@@ -12,28 +12,31 @@ from keras import backend as K
 def myprint(content, end=''):
     print(content, end=end)
 
-def load(workers=20, train_size=2000, test_size=300, _writer_num=100, size=(81, 78)):
+def load(data='train test', train_size=2000, test_size=300, _writer_num=100, size=(81, 78)):
 	global now, data_num, data_total_num, writer_num, H, W
 	global train, test
 
 	now = time()
 	data_num = 0
+	data_total_num = 0
 	writer_num = _writer_num
-	data_total_num = writer_num * (train_size + test_size)
 	train = list()
 	test = list()
 
 	H, W = size
 
+	load_opr = ''
+	if 'train' in data:
+		data_total_num += train_size * writer_num
+		load_opr += 'loadbatch(\'train\', 1, 2000)' + '\n'
+		load_opr += 'myprint(\'\\n训练集加载成功用时%ss\'%(time() - now), end=\'\\n\')' + '\n'
+	if 'test' in data:
+		data_total_num += test_size * writer_num
+		load_opr += 'loadbatch(\'test\', 1, 300)' + '\n'
+		load_opr += 'myprint(\'\\n测试集加载成功用时%ss\'%(time() - now), end=\'\\n\')' + '\n'
 
-	loadbatch('train', 1, 2000)
-
-	myprint('\n训练集加载成功用时%ss'%(time() - now), end='\n')
-
-	loadbatch('test', 1, 300)
+	exec(load_opr)
 	
-	myprint('\n测试集加载成功用时%ss'%(time() - now), end='\n')
-
 	x_train = [x[0] for x in train]
 	y_train = [x[1] for x in train]
 	x_test = [x[0] for x in test]
@@ -61,44 +64,6 @@ def load(workers=20, train_size=2000, test_size=300, _writer_num=100, size=(81, 
 
 	return (x_train, y_train), (x_test, y_test)
 
-def load_test(workers=20, test_size=300, _writer_num=100, size=(81, 78)):
-	global now, data_total_num, writer_num, H, W
-	global x_train, y_train, x_test, y_test
-
-	now = time()
-	data_num = mp.Value('d', 0.0)
-	writer_num = _writer_num
-	data_total_num = writer_num * test_size
-	x_test = mp.Manager().list()
-	y_test = mp.Manager().list()
-
-	H, W = size
-	
-	mp_load(
-		target=loadbatch,
-		datatype='test',
-		size=test_size,
-		data_num=data_num,
-		workers=workers
-	)
-	
-	myprint('\n测试集加载成功用时%ss'%(time() - now), end='\n')
-
-	x_test = np.array(x_test)
-	if K.image_data_format() == 'channels_first':
-		x_test = x_test.reshape(x_test.shape[0], 1, H, W)
-	else:
-		x_test = x_test.reshape(x_test.shape[0], H, W, 1)
-
-	x_test = x_test.astype('float32')
-
-	print(x_test.shape[0], 'test samples')
-
-	# convert class vectors to binary class matrices
-	y_test = keras.utils.to_categorical(y_test, writer_num)
-
-	return (x_test, y_test)
-
 def loadbatch(datatype, l, u):
 	global data_num
 	dir = ''
@@ -107,12 +72,14 @@ def loadbatch(datatype, l, u):
 		num_base = 0
 		dir_base = '/TRAIN_DATA/Dataset_png'
 		data_index = 0
-		operate = 'train.append((img, i - 1))'
+		operate = 'train.append((img, i - 1))' + '\n'
+		#operate += 'train.append((img_enpower(img, 0), i - 1))'
 	elif datatype == 'test':
 		num_base = 3000
 		dir_base = '/TEST_DATA/Dataset_png'
 		data_index = 1
-		operate = 'test.append((img, i - 1))'
+		operate = 'test.append((img, i - 1))' + '\n'
+		#operate += 'test.append((img_enpower(img, 0), i - 1))'
 	else:
 		return
 
@@ -146,21 +113,3 @@ def loadbatch(datatype, l, u):
 
 			exec(operate)
 			
-def mp_load(target, datatype, size, data_num, workers=20):
-	batch_size = int(size / workers)
-	proc_list = []
-
-	for i in range(workers):
-		proc_list.append(mp.Process(
-			target=target,
-			args=(
-				datatype,
-				batch_size * i + 1,
-				batch_size * (i + 1),
-				data_num
-			)
-		))
-		proc_list[i].start()
-
-	'''for i in range(workers):
-		proc_list[i].join()'''
